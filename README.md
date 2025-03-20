@@ -6,10 +6,10 @@ Sistema para gerenciar pedidos, estoque e atendimento de um bar.
  Em desenvolvimento  
 
 ## 💻 Tecnologias Utilizadas  
-- JavaScript 
+- JavaScript,  HTML, CSS
 - PHP  
 - MySQL  
-- html 
+- Spring Boot
 - Bootstrap 
 
 ## 👨‍💻 Time de Desenvolvedores  
