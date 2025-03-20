@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Estoque - Bar do Cris</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        main { min-height: 80vh; }
+        .disabled { pointer-events: none; opacity: 0.5; }
+        .user-info { position: absolute; top: 10px; right: 20px; }
+        .full-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; padding: 20px; display: none; z-index: 1000; overflow-y: auto; }
+        .table-container { max-height: 60vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <div th:replace="fragments/header :: header"></div>
+
+    <main class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📦 Controle de Estoque</h2>
+            <a href="/" class="btn btn-outline-dark">🏠 Home</a>
+        </div>
+
+        <!-- Botões Cadastro e Abastecimento -->
+        <div class="d-flex justify-content-between mb-3">
+            <button class="btn btn-primary" onclick="abrirCadastroProduto()">➕ Cadastrar Produto</button>
+            <button class="btn btn-secondary" onclick="window.location.href='/abastecimento'">📥 Abastecimento</button>
+        </div>
+
+        <!-- Barra de Pesquisa -->
+        <input type="text" id="searchBar" class="form-control mb-3" placeholder="🔍 Buscar produto..." onkeyup="filtrarProdutos()">
+
+        <!-- Lista de Produtos -->
+        <div class="table-container">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Nome</th>  <!-- Nome maior -->
+                        <th style="width: 15%;">Grupo</th>
+                        <th style="width: 15%;">Volume</th>
+                        <th style="width: 10%;">Qtd</th>
+                        <th style="width: 25%;">Ações</th>  <!-- Ações menor -->
+                    </tr>
+                </thead>
+                <tbody id="listaProdutos">
+                    <!-- Os produtos cadastrados serão exibidos aqui -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div class="mt-5"></div>
+
+    <div th:replace="fragments/footer :: footer"></div>
+
+    <!-- Tela de Cadastro de Produto -->
+    <div id="cadastroProduto" class="full-screen">
+        <h2>➕ Cadastrar Produto</h2>
+        <label>Nome:</label>
+        <input type="text" id="nomeProduto" class="form-control mb-2">
+        
+        <label>Descrição:</label>
+        <textarea id="descricaoProduto" class="form-control mb-2"></textarea>
+
+        <label>Grupo:</label>
+        <select id="grupoProduto" class="form-control mb-2">
+            <option>Bebida</option>  <!-- Agora é o primeiro -->
+            <option>Comida</option>
+            <option>Serviço</option>
+            <option>Outro</option>
+            <option>Especial</option>
+        </select>
+
+        <label>Volume:</label>
+        <input type="number" id="volumeProduto" class="form-control mb-2" min="0" max="3000">
+
+        <label>Tipo de Volume:</label>
+        <select id="tipoVolumeProduto" class="form-control mb-2">
+            <option>mL</option>  <!-- Agora é o primeiro -->
+            <option>Kg</option>
+            <option>g</option>
+            <option>L</option>
+            <option>Unidade(s)</option>
+            <option>Dose</option>
+            <option>Medida</option>
+            <option>Outro</option>
+        </select>
+
+        <button class="btn btn-success" onclick="salvarProduto()">💾 Salvar</button>
+        <button class="btn btn-danger" onclick="fecharCadastroProduto()">❌ Cancelar</button>
+    </div>
+
+    <script>
+        let produtos = [];
+
+        function abrirCadastroProduto() {
+            document.getElementById("cadastroProduto").style.display = "block";
+        }
+
+        function fecharCadastroProduto() {
+            document.getElementById("cadastroProduto").style.display = "none";
+        }
+
+        function salvarProduto() {
+            let nome = document.getElementById("nomeProduto").value.trim();
+            let descricao = document.getElementById("descricaoProduto").value.trim();
+            let grupo = document.getElementById("grupoProduto").value;
+            let volume = document.getElementById("volumeProduto").value;
+            let tipoVolume = document.getElementById("tipoVolumeProduto").value;
+
+            if (!nome || volume < 0 || volume > 3000) {
+                alert("Preencha corretamente os campos!");
+                return;
+            }
+
+            let produto = { id: Date.now(), nome, descricao, grupo, volume, tipoVolume, quantidade: 0 };
+            produtos.push(produto);
+            fecharCadastroProduto();
+            renderizarProdutos();
+        }
+
+        function renderizarProdutos() {
+            let tabela = document.getElementById("listaProdutos");
+            tabela.innerHTML = "";
+
+            produtos.forEach(produto => {
+                tabela.innerHTML += `
+                    <tr>
+                        <td>${produto.nome}</td>
+                        <td>${produto.grupo}</td>
+                        <td>${produto.volume} ${produto.tipoVolume}</td>
+                        <td>${produto.quantidade}</td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" onclick="editarProduto(${produto.id})">✏️ Editar</button>
+                            <button class="btn btn-danger btn-sm" onclick="excluirProduto(${produto.id})">🗑️ Excluir</button>
+                            <button class="btn btn-secondary btn-sm" onclick="subtrairEstoque(${produto.id})">➖ Subtrair</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function excluirProduto(id) {
+            if (confirm("Tem certeza que deseja excluir este produto?")) {
+                produtos = produtos.filter(p => p.id !== id);
+                renderizarProdutos();
+            }
+        }
+
+        function subtrairEstoque(id) {
+            let produto = produtos.find(p => p.id === id);
+            let valor = parseInt(prompt("Quantidade a subtrair:"), 10);
+            if (valor > produto.quantidade || valor < 1) {
+                alert("Valor inválido!");
+                return;
+            }
+            let motivo = prompt("Motivo da retirada:");
+            if (!motivo) return;
+            produto.quantidade -= valor;
+            renderizarProdutos();
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

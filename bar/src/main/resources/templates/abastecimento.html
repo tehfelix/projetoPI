@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Abastecimento - Bar do Cris</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        main { min-height: 80vh; }
+        .disabled { pointer-events: none; opacity: 0.5; }
+        .user-info { position: absolute; top: 10px; right: 20px; }
+        .table-container { max-height: 60vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <div th:replace="fragments/header :: header"></div>
+
+    <main class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>📥 Abastecimento</h2>
+            <a href="/" class="btn btn-outline-dark">🏠 Home</a>
+        </div>
+
+        <!-- Barra de Pesquisa -->
+        <input type="text" id="searchBar" class="form-control mb-3" placeholder="🔍 Buscar produto..." onkeyup="filtrarProdutos()">
+
+        <!-- Lista de Produtos -->
+        <div class="table-container">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Nome</th>
+                        <th style="width: 15%;">Grupo</th>
+                        <th style="width: 14%;">Volume</th>
+                        <th style="width: 8%;">Estoque Interno</th>
+                        <th style="width: 8%;">Estoque Venda</th>
+                        <th style="width: 10%;">Total</th>
+                        <th style="width: 15%;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="listaProdutos">
+                    <!-- Os produtos cadastrados serão exibidos aqui -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div class="mt-5"></div>
+
+    <div th:replace="fragments/footer :: footer"></div>
+
+    <script>
+        let produtos = [
+            { id: 1, nome: "Cerveja", grupo: "Bebida", volume: "600 mL", estoqueInterno: 50, estoqueVenda: 20 },
+            { id: 2, nome: "Refrigerante", grupo: "Bebida", volume: "2 L", estoqueInterno: 30, estoqueVenda: 15 },
+            { id: 3, nome: "Pastel", grupo: "Comida", volume: "Unidade", estoqueInterno: 40, estoqueVenda: 10 }
+        ];
+
+        function renderizarProdutos() {
+            let tabela = document.getElementById("listaProdutos");
+            tabela.innerHTML = "";
+
+            produtos.forEach(produto => {
+                let total = produto.estoqueInterno + produto.estoqueVenda;
+                tabela.innerHTML += `
+                    <tr>
+                        <td>${produto.nome}</td>
+                        <td>${produto.grupo}</td>
+                        <td>${produto.volume}</td>
+                        <td>${produto.estoqueInterno}</td>
+                        <td>${produto.estoqueVenda}</td>
+                        <td><strong>${total}</strong></td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="adicionarEstoque(${produto.id}, 'interno')">📥 Interno</button>
+                            <button class="btn btn-primary btn-sm" onclick="adicionarEstoque(${produto.id}, 'venda')">🛒 Venda</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function adicionarEstoque(id, tipo) {
+            let produto = produtos.find(p => p.id === id);
+            let valor = parseInt(prompt(`Quantidade a adicionar ao estoque ${tipo}:`), 10);
+            if (isNaN(valor) || valor <= 0) {
+                alert("Digite um valor válido!");
+                return;
+            }
+
+            if (tipo === "interno") {
+                produto.estoqueInterno += valor;
+            } else {
+                produto.estoqueVenda += valor;
+            }
+            renderizarProdutos();
+        }
+
+        function filtrarProdutos() {
+            let filtro = document.getElementById("searchBar").value.toLowerCase();
+            let linhas = document.querySelectorAll("#listaProdutos tr");
+            linhas.forEach(linha => {
+                let nome = linha.children[0].textContent.toLowerCase();
+                linha.style.display = nome.includes(filtro) ? "" : "none";
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", renderizarProdutos);
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vendas - Bar do Cris</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <style>
+        main { min-height: 80vh; }
+        .disabled { pointer-events: none; opacity: 0.5; }
+        .comanda-container { display: flex; flex-wrap: wrap; gap: 15px; }
+        .comanda { border: 2px solid #007bff; border-radius: 10px; padding: 15px; width: 300px; }
+        .comanda-header { display: flex; justify-content: space-between; align-items: center; }
+        .comanda-title { font-size: 18px; font-weight: bold; flex-grow: 1; }
+        .item-list { max-height: 200px; overflow-y: auto; }
+        .pago { text-decoration: line-through; color: gray; }
+        .editable { border: none; background: transparent; width: 100%; font-size: 18px; font-weight: bold; }
+        .editable:focus { outline: none; border-bottom: 1px solid #007bff; }
+    </style>
+</head>
+<body>
+
+    <div th:replace="fragments/header :: header"></div>
+
+    <main class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>🛒 Vendas</h2>
+            <a href="/" class="btn btn-outline-dark">🏠 Home</a>
+        </div>
+
+        <!-- Adicionar nova comanda -->
+        <div class="mb-4">
+            <input type="text" id="nomeCliente" class="form-control" placeholder="Nome do Cliente (Opcional)">
+            <button class="btn btn-primary mt-2 w-100" onclick="novaComanda()">➕ Nova Comanda</button>
+        </div>
+
+        <!-- Lista de Comandas -->
+        <div id="comandas" class="comanda-container">
+            <!-- Comandas serão adicionadas aqui -->
+        </div>
+    </main>
+
+    <div class="mt-5"></div>
+    
+    <div th:replace="fragments/footer :: footer"></div>
+
+    <script>
+        let comandas = [];
+        let comandaCount = 1;
+
+        function novaComanda() {
+            let nome = document.getElementById("nomeCliente").value.trim();
+            if (nome === "") nome = "Cli " + (comandaCount < 10 ? "0" + comandaCount : comandaCount);
+            comandaCount++;
+
+            let comanda = {
+                id: "comanda-" + Date.now(),
+                nome: nome,
+                itens: [],
+                fechada: false
+            };
+            comandas.push(comanda);
+            renderizarComandas();
+        }
+
+        function editarNomeComanda(event, comandaId) {
+            let novoNome = event.target.value.trim();
+            if (novoNome === "") {
+                event.target.value = comandas.find(c => c.id === comandaId).nome; // Restaura o nome anterior
+            } else {
+                comandas.find(c => c.id === comandaId).nome = novoNome; // Salva o novo nome
+            }
+        }
+
+        function adicionarItem(idComanda) {
+            let itemNome = prompt("Nome do item:");
+            let quantidade = parseInt(prompt("Quantidade:"), 10);
+            if (!itemNome || isNaN(quantidade) || quantidade <= 0) return;
+
+            let comanda = comandas.find(c => c.id === idComanda);
+            comanda.itens.push({ nome: itemNome, quantidade: quantidade, pago: false, cortesia: false, selecionado: false });
+            renderizarComandas();
+        }
+
+        function selecionarItem(comandaId, itemIndex, tipo) {
+            let comanda = comandas.find(c => c.id === comandaId);
+            let item = comanda.itens[itemIndex];
+
+            if (item.pago) return; // Se já foi pago, não pode alterar
+
+            if (tipo === "pago") {
+                item.selecionado = !item.selecionado;
+                if (item.selecionado) item.cortesia = false; // Se selecionar para pagar, desmarca cortesia
+            } else if (tipo === "cortesia") {
+                item.cortesia = !item.cortesia;
+                if (item.cortesia) item.selecionado = false; // Se marcar cortesia, desmarca pagar
+            }
+            renderizarComandas();
+        }
+
+        function pagarSelecionados(idComanda) {
+            let comanda = comandas.find(c => c.id === idComanda);
+            comanda.itens.forEach(item => {
+                if (item.selecionado || item.cortesia) {
+                    item.pago = true;
+                    item.selecionado = false;
+                }
+            });
+            renderizarComandas();
+        }
+
+        function fecharComanda(idComanda) {
+            let comanda = comandas.find(c => c.id === idComanda);
+            
+            // Verificar se há itens não pagos
+            let itensNaoPagos = comanda.itens.filter(item => !item.pago);
+            if (itensNaoPagos.length > 0) {
+                let justificativa = prompt("Existem itens não pagos. Informe a justificativa:");
+                if (!justificativa || justificativa.trim() === "") {
+                    alert("A comanda não pode ser fechada sem justificativa.");
+                    return;
+                }
+            }
+            
+            comanda.fechada = true;
+            renderizarComandas();
+        }
+
+        function renderizarComandas() {
+            let container = document.getElementById("comandas");
+            container.innerHTML = "";
+            comandas.forEach(comanda => {
+                if (comanda.fechada) return;
+
+                let itensHtml = comanda.itens.map((item, index) => `
+                    <li class="list-group-item d-flex justify-content-between ${item.pago ? 'pago' : ''}">
+                        <span>${item.quantidade}x ${item.nome}</span>
+                        <div>
+                            <input type="checkbox" ${item.pago ? "disabled checked" : ""}
+                                ${item.cortesia ? "disabled" : ""}
+                                ${item.selecionado ? "checked" : ""}
+                                onclick="selecionarItem('${comanda.id}', ${index}, 'pago')">
+                            <span class="text-success">💲</span>
+
+                            <input type="checkbox" ${item.pago ? "disabled" : ""}
+                                ${item.cortesia ? "checked" : ""}
+                                onclick="selecionarItem('${comanda.id}', ${index}, 'cortesia')">
+                            <span class="text-warning">🎁</span>
+                        </div>
+                    </li>
+                `).join("");
+
+                container.innerHTML += `
+                    <div class="comanda p-3">
+                        <div class="comanda-header">
+                            <input type="text" class="editable" value="${comanda.nome}" 
+                                onblur="editarNomeComanda(event, '${comanda.id}')"
+                                onkeypress="if(event.keyCode === 13) { this.blur(); }">
+                            <button class="btn btn-danger btn-sm" onclick="fecharComanda('${comanda.id}')">❌ Fechar</button>
+                        </div>
+                        <ul class="list-group item-list mt-2">${itensHtml || "<li class='list-group-item'>Sem itens</li>"}</ul>
+                        <button class="btn btn-success btn-sm w-100 mt-2" onclick="adicionarItem('${comanda.id}')">➕ Adicionar Item</button>
+                        <button class="btn btn-primary btn-sm w-100 mt-2" onclick="pagarSelecionados('${comanda.id}')">💰 Pagar Selecionados</button>
+                    </div>
+                `;
+            });
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
